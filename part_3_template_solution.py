@@ -74,20 +74,18 @@ class Section3:
     ]:
         """ """
         clf = LogisticRegression(max_iter=300, multi_class='ovr', n_jobs=-1, random_state=self.seed, tol = 0.01)
-        clf.fit(Xtrain, ytrain)  # Ensure Xtrain and ytrain are properly scaled and prepared
+        clf.fit(Xtrain, ytrain)
 
         k_values = [1, 2, 3, 4, 5]
         score_train = []
         score_test = []
 
-        # Calculate top-k accuracy scores for the given k values
         for k in k_values:
             topk_train = top_k_accuracy_score(ytrain, clf.predict_proba(Xtrain), k=k)
             topk_test = top_k_accuracy_score(ytest, clf.predict_proba(Xtest), k=k)
             score_train.append(k, topk_train)
             score_test.append(k, topk_test)
 
-        # Plotting top-k accuracy for training and testing datasets
         plt.figure(figsize=(8, 5))
         plt.plot(k_values, score_train, label='Training Score', marker='o')
         plt.plot(k_values, score_test, label='Testing Score', marker='o')
@@ -97,12 +95,10 @@ class Section3:
         plt.legend()
         plt.grid(True)
         plt.show()
-        # Preparing the answer dictionary
         answer = {
             'clf': clf,
             'plot_k_vs_score_train': score_train,
             'plot_k_vs_score_test': score_test,
-            # Include additional commentary in these placeholders as needed
             'text_rate_accuracy_change': 'The rate of accuracy change starts fast from 1 to 2 but slows down dramatically after 3',
             'text_is_topk_useful_and_why': 'Top K is useful in the sense of finding which K value is the best fit given the parameters and computational costs.',
         }
