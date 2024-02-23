@@ -4,7 +4,10 @@
 import numpy as np
 from numpy.typing import NDArray
 from typing import Any
-
+import utils as u
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_validate, KFold, ShuffleSplit
+from sklearn.tree import DecisionTreeClassifier
 # ======================================================================
 
 # I could make Section 2 a subclass of Section 1, which would facilitate code reuse.
@@ -16,7 +19,7 @@ class Section2:
     def __init__(
         self,
         normalize: bool = True,
-        seed: int | None = None,
+        seed: int = None,
         frac_train: float = 0.2,
     ):
         """
@@ -51,7 +54,23 @@ class Section2:
         NDArray[np.floating],
         NDArray[np.int32],
     ]:
-        answer = {}
+        Xtrain, ytrain, Xtest, ytest = u.prepare_data()
+        uniq_class_ytrain, counts_ytrain = np.unique(ytrain, return_counts= True)
+        uniq_class_ytest, counts_ytest = np.unique(ytest, return_counts = True)
+
+
+        answer = {
+            'nb_classes_train': len(np.unique(ytrain)),
+            'nb_classes_test': len(np.unique(ytest)),
+            'class_count_train': counts_ytrain.tolist(),
+            'class_count_test': counts_ytest.tolist(),
+            'length_Xtrain': len(Xtrain),
+            'length_Xtest': len(Xtest),
+            'length_ytrain': len(ytrain),
+            'length_ytest': len(ytest),
+            'max_Xtrain': np.max(Xtrain),
+            'max_Xtest': np.max(Xtest),
+        }
         # Enter your code and fill the `answer`` dictionary
 
         # `answer` is a dictionary with the following keys:
@@ -96,27 +115,85 @@ class Section2:
         y: NDArray[np.int32],
         Xtest: NDArray[np.floating],
         ytest: NDArray[np.int32],
-        ntrain_list: list[int] = [],
-        ntest_list: list[int] = [],
+        ntrain_list: list[int] = [100, 500, 1000],
+        ntest_list: list[int] = [20, 100, 200],
     ) -> dict[int, dict[str, Any]]:
         """ """
         # Enter your code and fill the `answer`` dictionary
+        def calc_class_counts(y):
+            return [list(y).count(i) for i in range(np.min(y), np.max(y) + 1)]
+        
+        def do_cross_validate(classifier, X, y, cv):
+            scores = cross_validate(classifier, X, y, cv=cv, scoring = 'accuracy', return_train_score= False)
+            mean_acc = scores['test_score'].mean()
+            std_acc = scores['test_score'].std()
+            return mean_acc, std_acc
+        
+        Xtrain = u.prepare_data()
+        ytrain = u.prepare_data()
+        Xtest = u.prepare_data()
+        ytest = u.prepare_data()
         answer = {}
 
-        """
-        `answer` is a dictionary with the following keys:
-           - 1000, 5000, 10000: each key is the number of training samples
+        for ntrain in ntrain_list:
+            for ntest in ntest_list:
+                Xtrain_subset = Xtrain[:ntrain]
+                ytrain_subset = ytrain[:ntrain]
+                Xtest_subset = Xtest[:ntest]
+                ytest_subset = ytest[:ntest]
+                #1.C
+                clf= DecisionTreeClassifier(random_state = self.seed)
+                cv_c = KFold(n_splits = 5, shuffle = True, random_state= self.seed)
+                
 
-           answer[k] is itself a dictionary with the following keys
-            - "partC": dictionary returned by partC section 1
-            - "partD": dictionary returned by partD section 1
-            - "partF": dictionary returned by partF section 1
-            - "ntrain": number of training samples
-            - "ntest": number of test samples
-            - "class_count_train": number of elements in each class in
-                               the training set (a list, not a numpy array)
-            - "class_count_test": number of elements in each class in
-                               the training set (a list, not a numpy array)
-        """
+                mean_acc_c, std_acc_c = do_cross_validate(clf, Xtrain_subset, ytrain_subset, cv_c)
+
+                #1.D
+                cv_d = ShuffleSplit(n_splits = 5, test_size = 0.2, random_state = self.seed)
+                
+                mean_acc_d, std_acc_d = do_cross_validate(clf, Xtrain_subset, ytrain_subset, cv_d)
+
+                #1.F
+                clf_f = LogisticRegression(max_iter = 300, multi_class = 'ovr', n_jobs = -1)
+                clf_f.fit(Xtrain_subset, ytrain_subset)
+                acc_train_F = clf_f.score(Xtrain_subset, ytrain_subset)
+                acc_test_F = clf_f.score(Xtest_subset, ytest_subset)
+
+
+       
+            answer[ntrain] = {
+                'partC': {
+                    'mean_accuracy': mean_acc_c,
+                    'std_accuracy': std_acc_c,
+                },
+                'partD': {
+                    'mean_accuracy': mean_acc_d,
+                    'std_accuracy': std_acc_d,
+                },
+                'partF': {
+                    'accuracy_train': acc_train_F,
+                    'accuracy_test': acc_test_F,
+                },
+                'ntrain': ntrain,
+                'ntest': ntest,
+                'class_count_train': calc_class_counts(ytrain),
+                'class_count_test': calc_class_counts(ytest),
+            }
+
+            """
+            `answer` is a dictionary with the following keys:
+            - 1000, 5000, 10000: each key is the number of training samples
+
+            answer[k] is itself a dictionary with the following keys
+                - "partC": dictionary returned by partC section 1
+                - "partD": dictionary returned by partD section 1
+                - "partF": dictionary returned by partF section 1
+                - "ntrain": number of training samples
+                - "ntest": number of test samples
+                - "class_count_train": number of elements in each class in
+                                the training set (a list, not a numpy array)
+                - "class_count_test": number of elements in each class in
+                                the training set (a list, not a numpy array)
+            """
 
         return answer

@@ -32,7 +32,6 @@ def part_A(
     answer, X, y, Xtest, ytest = self.partA(X, y, Xtest, ytest)
     return answer, X, y, Xtest, ytest
 
-
 """
 B. Repeat part 1.B but return an imbalanced dataset consisting of 90% of all 9s removed. 
    Also convert the 7s to 0s and 9s to 1s.
